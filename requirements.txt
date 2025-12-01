@@ -1,0 +1,13 @@
+# 訂單資料整理工具 - 相依套件清單
+
+# 網頁框架
+streamlit>=1.28.0
+
+# Excel 讀取（如果需要）
+openpyxl>=3.1.0
+
+# 基礎套件（Python 內建，無需安裝）
+# re
+# datetime
+# collections
+# typing
