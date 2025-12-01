@@ -8,6 +8,115 @@ import streamlit as st
 from order_formatter import OrderFormatter
 from datetime import datetime
 import io
+import re
+
+# 轉換多行格式為 Tab 分隔格式
+def convert_multi_line_format(order_data):
+    """轉換多行格式為 Tab 分隔格式"""
+    lines = order_data.split('\n')
+
+    # 解析多行格式
+    orders = []
+    current_order = []
+
+    for i, line in enumerate(lines):
+        line = line.strip()
+
+        if not line:
+            # 遇到空行表示一筆訂單結束
+            if current_order:
+                filtered_order = [item for item in current_order if item]
+                if filtered_order:
+                    orders.append(filtered_order)
+                current_order = []
+            continue
+
+        # 檢查是否為新訂單的品項行（包含 x數量 或 *數量 格式）
+        is_item_line = bool(re.search(r'[xX×*]\s*\d+', line))
+
+        # 如果當前行是品項行，且已經有資料在 current_order 中
+        # 表示這是新訂單的開始，需要先保存前一筆訂單
+        if is_item_line and current_order:
+            # 檢查 current_order 是否已經是完整訂單（至少有願望行）
+            has_wish = any('願望' in item or '愿望' in item for item in current_order)
+            if has_wish:
+                # 保存前一筆訂單
+                filtered_order = [item for item in current_order if item]
+                if filtered_order:
+                    orders.append(filtered_order)
+                current_order = []
+
+        # 非空行加入當前訂單
+        current_order.append(line)
+
+    # 處理最後一筆訂單
+    if current_order:
+        filtered_order = [item for item in current_order if item]
+        if filtered_order:
+            orders.append(filtered_order)
+
+    # 轉換格式
+    converted_orders = []
+
+    for order_lines in orders:
+        if len(order_lines) < 2:
+            continue
+
+        # 第1行：品項
+        item = order_lines[0]
+
+        # 找到主要人物（姓名 生日）- 通常是第2行或第3行
+        main_person = "—"
+        target_person = "—"
+        wish = ""
+
+        # 從第二行開始查找
+        person_index = 1
+        wish_index = -1
+
+        # 查找願望行的位置
+        for idx, line in enumerate(order_lines[1:], start=1):
+            if '願望' in line or '祈' in line:
+                wish_index = idx
+                wish = line.replace('願望：', '').replace('願望:', '').strip()
+                break
+
+        # 在願望之前的行中找人物資料
+        person_lines = order_lines[1:wish_index] if wish_index > 0 else order_lines[1:]
+
+        # 解析人物資料的輔助函數
+        def parse_person(person_line):
+            """解析人物資料，返回格式化的字符串"""
+            # 嘗試匹配 "姓名 生日" 或 "姓名生日" 格式
+            # 支援多種日期格式：1988/6/30, 1988.6.30, 1988-6-30
+            match = re.match(r'^(.+?)\s*(\d{4}[/\.\-]?\d{1,2}[/\.\-]?\d{1,2})$', person_line)
+            if match:
+                name = match.group(1).strip()
+                birth = match.group(2).replace('/', '.').replace('-', '.')
+                return f"{name}/{birth}"
+            else:
+                # 如果匹配失敗，返回原字符串
+                return person_line
+
+        # 解析人物資料
+        if len(person_lines) >= 1:
+            # 第一個人物（主要人物）
+            main_person = parse_person(person_lines[0])
+
+        if len(person_lines) >= 2:
+            # 第二個人物（對象）
+            target_person = parse_person(person_lines[1])
+
+        # 組合成 Tab 分隔格式
+        converted = f"{item}\t{main_person}\t{target_person}\t{wish}"
+        converted_orders.append(converted)
+
+    if not converted_orders:
+        st.error("❌ 無法解析資料格式！請確認資料是多行格式。")
+        return None
+
+    st.success(f"✅ 成功轉換 {len(converted_orders)} 筆訂單！")
+    return '\n'.join(converted_orders)
 
 # 設定頁面配置
 st.set_page_config(
@@ -97,32 +206,33 @@ tab1, tab2, tab3 = st.tabs(["📝 訂單輸入", "📊 報表結果", "ℹ️ �
 with tab1:
     st.header("訂單資料輸入")
 
-    # 輸入方式選擇
-    input_method = st.radio(
-        "選擇輸入方式：",
-        ["📝 手動輸入", "📄 範例資料"],
-        horizontal=True
-    )
-
     # 訂單資料輸入
-    if input_method == "📄 範例資料":
-        import os
-        example_file = os.path.join(os.path.dirname(__file__), '範例資料.txt')
-        if os.path.exists(example_file):
-            with open(example_file, 'r', encoding='utf-8') as f:
-                default_data = f.read()
-        else:
-            default_data = """招財女神x1\n李丞宣 Cheng Hsuan Li 1975/2/25\n願望：偏財天天來，錢財大賺，能很快就存到100萬元。\n\n三鬼頭x2\n王小明 1990/5/20\n李美麗 1992/8/15\n願望：事業順利"""
-    else:
-        default_data = ""
+    if 'order_data' not in st.session_state:
+        st.session_state.order_data = ""
 
     order_data = st.text_area(
         "訂單資料：",
-        value=default_data,
+        value=st.session_state.order_data,
         height=300,
         placeholder="請貼上訂單資料...\n\n格式：品項<Tab>姓名/生日<Tab>對象/生日<Tab>願望",
-        help="支援 Tab 分隔格式或多行格式"
+        help="支援 Tab 分隔格式或多行格式",
+        key="order_input"
     )
+
+    # 更新 session state
+    st.session_state.order_data = order_data
+
+    # 轉換多行格式按鈕
+    col_convert1, col_convert2, col_convert3 = st.columns([1, 1, 2])
+    with col_convert1:
+        if st.button("🔄 轉換多行格式", use_container_width=True, help="將多行格式轉換為 Tab 分隔格式"):
+            if not order_data.strip():
+                st.error("❌ 請先輸入資料！")
+            else:
+                converted_data = convert_multi_line_format(order_data)
+                if converted_data:
+                    st.session_state.order_data = converted_data
+                    st.rerun()
 
     # 參考數據輸入
     with st.expander("🔍 參考數據比對（選填）"):
