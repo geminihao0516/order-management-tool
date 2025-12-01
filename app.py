@@ -32,7 +32,9 @@ def convert_multi_line_format(order_data):
             continue
 
         # 檢查是否為新訂單的品項行（包含 x數量 或 *數量 格式）
-        is_item_line = bool(re.search(r'[xX×*]\s*\d+', line))
+        # 匹配：品項名 + 可選空格 + x/X/×/* + 可選空格 + 數字
+        # 必須是行的主要內容，不是生日或其他格式
+        is_item_line = bool(re.search(r'^[^\d]+\s*[xX×*]\s*\d+', line))
 
         # 如果當前行是品項行，且已經有資料在 current_order 中
         # 表示這是新訂單的開始，需要先保存前一筆訂單
