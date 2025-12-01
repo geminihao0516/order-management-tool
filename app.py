@@ -39,8 +39,9 @@ def convert_multi_line_format(order_data):
         # 如果當前行是品項行，且已經有資料在 current_order 中
         # 表示這是新訂單的開始，需要先保存前一筆訂單
         if is_item_line and current_order:
-            # 如果 current_order 至少有 2 行（品項 + 至少一個人物/願望），就保存
-            if len(current_order) >= 2:
+            # 檢查 current_order 是否已經是完整訂單（至少有願望行）
+            has_wish = any('願望' in item or '愿望' in item or '祈' in item for item in current_order)
+            if has_wish:
                 # 保存前一筆訂單
                 filtered_order = [item for item in current_order if item]
                 if filtered_order:
