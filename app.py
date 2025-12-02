@@ -117,8 +117,17 @@ def convert_multi_line_format(order_data):
         st.error("❌ 無法解析資料格式！請確認資料是多行格式。")
         return None
 
+    # 調試信息 - 版本標記：v2.1
+    result = '\n'.join(converted_orders)
+    st.info(f"🔍 版本 v2.1 | 解析: {len(orders)} 組 → 轉換: {len(converted_orders)} 筆")
     st.success(f"✅ 成功轉換 {len(converted_orders)} 筆訂單！")
-    return '\n'.join(converted_orders)
+
+    # 調試：顯示前3筆
+    with st.expander("🔍 查看前3筆轉換結果"):
+        for i, line in enumerate(result.split('\n')[:3], 1):
+            st.code(f"{i}. {line}", language="text")
+
+    return result
 
 # 設定頁面配置
 st.set_page_config(
@@ -161,8 +170,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 主標題
-st.markdown('<div class="main-header">📋 訂單資料整理工具</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">📋 訂單資料整理工具 v2.1</div>', unsafe_allow_html=True)
 st.markdown("**自動展開品項 • 雙欄排版 • 統計分析 • 差異比對**")
+st.warning("🔥 新版本 v2.1 - 已更新轉換邏輯！如果看不到此訊息，請刷新頁面（Ctrl+F5 或 Cmd+Shift+R）")
 st.divider()
 
 # 側邊欄 - 使用說明
@@ -224,6 +234,11 @@ with tab1:
     # 更新 session state
     st.session_state.order_data = order_data
 
+    # 顯示轉換成功訊息
+    if st.session_state.get('conversion_done', False):
+        st.success("✅ 轉換完成！資料已更新到輸入框中，現在可以點擊「📊 生成報表」")
+        st.session_state.conversion_done = False
+
     # 轉換多行格式按鈕
     col_convert1, col_convert2, col_convert3 = st.columns([1, 1, 2])
     with col_convert1:
@@ -233,8 +248,23 @@ with tab1:
             else:
                 converted_data = convert_multi_line_format(order_data)
                 if converted_data:
-                    st.session_state.order_data = converted_data
-                    st.rerun()
+                    # 儲存轉換結果
+                    st.session_state.converted_result = converted_data
+                else:
+                    st.error("❌ 轉換失敗，請檢查資料格式")
+
+    # 顯示轉換結果
+    if 'converted_result' in st.session_state and st.session_state.converted_result:
+        st.success("✅ 轉換完成！請複製下方結果，貼回上面的輸入框，然後點擊「📊 生成報表」")
+        st.text_area(
+            "轉換結果（請複製）：",
+            value=st.session_state.converted_result,
+            height=200,
+            key="converted_output"
+        )
+        if st.button("🗑️ 清除轉換結果", use_container_width=True):
+            del st.session_state.converted_result
+            st.rerun()
 
     # 參考數據輸入
     with st.expander("🔍 參考數據比對（選填）"):
