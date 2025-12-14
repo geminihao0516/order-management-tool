@@ -262,13 +262,14 @@ class OrderFormatter:
         result.append("**使用說明**：直接複製以下內容即可\n")
         result.append("---\n")
 
-        # 單欄格式輸出（不加空行，複製到Word時才不會跳行）
+        # 單欄格式輸出
         for order in self.expanded_orders:
             result.append(f"{order['index']}")
             result.append(f"{order['item']}")
             result.append(f"{order['main_person']}")
             result.append(f"{order['target_person']}")
             result.append(f"{order['wish']}")
+            result.append("")  # 空行分隔每筆訂單
 
         return '\n'.join(result)
 
