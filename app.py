@@ -7,7 +7,6 @@
 import streamlit as st
 from order_formatter import OrderFormatter
 from datetime import datetime
-import io
 import re
 
 # 轉換多行格式為 Tab 分隔格式
@@ -466,8 +465,8 @@ with tab3:
 
     ### 📝 版本資訊
 
-    - **版本**：v2.0 (網頁版)
-    - **更新日期**：2025-12-01
+    - **版本**：v2.2 (網頁版)
+    - **更新日期**：2026-01-10
 
     ---
 
@@ -478,6 +477,6 @@ with tab3:
 st.divider()
 st.markdown("""
 <div style='text-align: center; color: gray; padding: 1rem;'>
-    <p>訂單資料整理工具 v2.0 | 使用 Streamlit 構建</p>
+    <p>訂單資料整理工具 v2.2 | 使用 Streamlit 構建</p>
 </div>
 """, unsafe_allow_html=True)

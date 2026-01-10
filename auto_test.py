@@ -36,7 +36,7 @@ def convert_multi_line_format(order_data):
         # 表示這是新訂單的開始，需要先保存前一筆訂單
         if is_item_line and current_order:
             # 檢查 current_order 是否已經是完整訂單（至少有願望行）
-            has_wish = any('願望' in item or '愿望' in item or '祈' in item for item in current_order)
+            has_wish = any('願望' in item or '愿望' in item or '祈' in item or '蠟燭' in item for item in current_order)
             if has_wish:
                 # 保存前一筆訂單
                 filtered_order = [item for item in current_order if item]
@@ -72,11 +72,24 @@ def convert_multi_line_format(order_data):
         person_index = 1
         wish_index = -1
 
-        # 查找願望行的位置
+        # 查找願望行的位置（支援「願望」「祈」「蠟燭」等開頭）
         for idx, line in enumerate(order_lines[1:], start=1):
-            if '願望' in line or '祈' in line:
+            if '願望' in line or '祈' in line or '蠟燭' in line:
                 wish_index = idx
-                wish = line.replace('願望：', '').replace('願望:', '').strip()
+                # 處理願望的第一行
+                wish_first = line.replace('願望：', '').replace('願望:', '')
+                wish_first = wish_first.replace('蠟燭：', '').replace('蠟燭:', '').strip()
+                
+                # 收集願望後續的多行內容（直到遇到下一筆訂單的品項行或結束）
+                wish_lines = [wish_first]
+                for extra_idx in range(idx + 1, len(order_lines)):
+                    extra_line = order_lines[extra_idx].strip()
+                    # 檢查是否為新訂單的品項行（停止收集）
+                    if re.search(r'^[^\d]+\s*[xX×*]\s*\d+', extra_line):
+                        break
+                    wish_lines.append(extra_line)
+                
+                wish = ' '.join(wish_lines)
                 break
 
         # 在願望之前的行中找人物資料
