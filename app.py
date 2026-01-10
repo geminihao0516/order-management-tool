@@ -40,7 +40,7 @@ def convert_multi_line_format(order_data):
         # 表示這是新訂單的開始，需要先保存前一筆訂單
         if is_item_line and current_order:
             # 檢查 current_order 是否已經是完整訂單（至少有願望行）
-            has_wish = any('願望' in item or '愿望' in item or '祈' in item for item in current_order)
+            has_wish = any('願望' in item or '愿望' in item or '祈' in item or '蠟燭' in item for item in current_order)
             if has_wish:
                 # 保存前一筆訂單
                 filtered_order = [item for item in current_order if item]
@@ -76,11 +76,24 @@ def convert_multi_line_format(order_data):
         person_index = 1
         wish_index = -1
 
-        # 查找願望行的位置
+        # 查找願望行的位置（支援「願望」「祈」「蠟燭」等開頭）
         for idx, line in enumerate(order_lines[1:], start=1):
-            if '願望' in line or '祈' in line:
+            if '願望' in line or '祈' in line or '蠟燭' in line:
                 wish_index = idx
-                wish = line.replace('願望：', '').replace('願望:', '').strip()
+                # 處理願望的第一行
+                wish_first = line.replace('願望：', '').replace('願望:', '')
+                wish_first = wish_first.replace('蠟燭：', '').replace('蠟燭:', '').strip()
+                
+                # 收集願望後續的多行內容（直到遇到下一筆訂單的品項行或結束）
+                wish_lines = [wish_first]
+                for extra_idx in range(idx + 1, len(order_lines)):
+                    extra_line = order_lines[extra_idx].strip()
+                    # 檢查是否為新訂單的品項行（停止收集）
+                    if re.search(r'^[^\d]+\s*[xX×*]\s*\d+', extra_line):
+                        break
+                    wish_lines.append(extra_line)
+                
+                wish = ' '.join(wish_lines)
                 break
 
         # 在願望之前的行中找人物資料
@@ -117,9 +130,9 @@ def convert_multi_line_format(order_data):
         st.error("❌ 無法解析資料格式！請確認資料是多行格式。")
         return None
 
-    # 調試信息 - 版本標記：v2.1
+    # 調試信息 - 版本標記：v2.2
     result = '\n'.join(converted_orders)
-    st.info(f"🔍 版本 v2.1 | 解析: {len(orders)} 組 → 轉換: {len(converted_orders)} 筆")
+    st.info(f"🔍 版本 v2.2 | 解析: {len(orders)} 組 → 轉換: {len(converted_orders)} 筆")
     st.success(f"✅ 成功轉換 {len(converted_orders)} 筆訂單！")
 
     # 調試：顯示前3筆
@@ -170,9 +183,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 主標題
-st.markdown('<div class="main-header">📋 訂單資料整理工具 v2.1</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">📋 訂單資料整理工具 v2.2</div>', unsafe_allow_html=True)
 st.markdown("**自動展開品項 • 雙欄排版 • 統計分析 • 差異比對**")
-st.warning("🔥 新版本 v2.1 - 已更新轉換邏輯！如果看不到此訊息，請刷新頁面（Ctrl+F5 或 Cmd+Shift+R）")
+st.warning("🔥 新版本 v2.2 - 修復多行願望截斷問題！如果看不到此訊息，請刷新頁面（Ctrl+F5 或 Cmd+Shift+R）")
 st.divider()
 
 # 側邊欄 - 使用說明
