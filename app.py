@@ -5,9 +5,11 @@
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from order_formatter import OrderFormatter
 from datetime import datetime
 import re
+import html
 
 # 轉換多行格式為 Tab 分隔格式
 def convert_multi_line_format(order_data):
@@ -149,34 +151,140 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 自訂 CSS 樣式
+# 自訂 CSS 樣式 - 現代設計系統
 st.markdown("""
 <style>
+    /* === 設計系統變數 === */
+    :root {
+        --color-primary: #667eea;
+        --color-primary-dark: #5a67d8;
+        --color-secondary: #48bb78;
+        --color-accent: #ed8936;
+        --color-background: #f7fafc;
+        --color-text: #2d3748;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+        --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+        --radius-md: 0.5rem;
+        --radius-lg: 1rem;
+    }
+    
+    /* === 主標題 - 漸層動畫 === */
     .main-header {
         font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         text-align: center;
-        padding: 1rem 0;
+        padding: 1.5rem 0;
+        animation: fadeInDown 0.6s ease-out;
     }
-    .success-box {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-        margin: 1rem 0;
+    
+    @keyframes fadeInDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
     }
-    .info-box {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        background-color: #d1ecf1;
-        border: 1px solid #bee5eb;
-        color: #0c5460;
-        margin: 1rem 0;
+    
+    /* === 副標題 === */
+    .subtitle {
+        text-align: center;
+        color: #718096;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
     }
-    .stDownloadButton button {
+    
+    /* === 按鈕樣式 === */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-md);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .stButton > button:active {
+        transform: translateY(0);
+    }
+    
+    /* === 下載按鈕 === */
+    .stDownloadButton > button {
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
         width: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .stDownloadButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* === 成功提示框 === */
+    .success-box {
+        padding: 1rem 1.5rem;
+        border-radius: var(--radius-md);
+        background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+        border-left: 4px solid #48bb78;
+        color: #22543d;
+        margin: 1rem 0;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    /* === 資訊提示框 === */
+    .info-box {
+        padding: 1rem 1.5rem;
+        border-radius: var(--radius-md);
+        background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+        border-left: 4px solid #4299e1;
+        color: #2a4365;
+        margin: 1rem 0;
+    }
+    
+    /* === Tab 樣式 === */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+    
+    /* === Metric 卡片 === */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+    
+    /* === 文字區域 === */
+    .stTextArea textarea {
+        border-radius: var(--radius-md);
+        border: 2px solid #e2e8f0;
+        transition: border-color 0.2s;
+    }
+    
+    .stTextArea textarea:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -406,47 +514,65 @@ with tab2:
             st.subheader("📋 訂單明細表")
             st.caption("使用說明：直接複製以下內容即可")
             
-            # 一鍵複製按鈕
-            import streamlit.components.v1 as components
-            
-            # 將內容轉義以防止 JavaScript 注入
-            escaped_content = st.session_state.plain_details.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+            # 使用更安全的轉義方式
+            import json
+            escaped_content = json.dumps(st.session_state.plain_details)[1:-1]  # 移除首尾引號
             
             copy_button_html = f"""
-            <div style="margin-bottom: 10px;">
-                <button onclick="copyToClipboard()" style="
-                    background-color: #4CAF50;
+            <div style="margin-bottom: 15px;">
+                <button onclick="copyToClipboard()" id="copyBtn" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     border: none;
                     color: white;
-                    padding: 10px 20px;
+                    padding: 12px 24px;
                     text-align: center;
                     text-decoration: none;
-                    display: inline-block;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
                     font-size: 16px;
-                    margin: 4px 2px;
+                    font-weight: 600;
                     cursor: pointer;
-                    border-radius: 8px;
-                    transition: background-color 0.3s;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                    transition: all 0.3s ease;
                 ">
-                    📋 一鍵複製全部內容
+                    <span style="font-size: 20px;">📋</span>
+                    一鍵複製全部內容
                 </button>
-                <span id="copyStatus" style="margin-left: 10px; color: green; display: none;">✅ 已複製！</span>
+                <span id="copyStatus" style="
+                    margin-left: 15px;
+                    color: #48bb78;
+                    font-weight: 600;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                ">✅ 已複製到剪貼簿！</span>
             </div>
+            <style>
+                #copyBtn:hover {{
+                    transform: translateY(-3px);
+                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+                }}
+                #copyBtn:active {{
+                    transform: translateY(-1px);
+                }}
+            </style>
             <script>
                 function copyToClipboard() {{
-                    const text = `{escaped_content}`;
+                    const text = "{escaped_content}";
                     navigator.clipboard.writeText(text).then(function() {{
-                        document.getElementById('copyStatus').style.display = 'inline';
+                        const status = document.getElementById('copyStatus');
+                        status.style.opacity = '1';
                         setTimeout(function() {{
-                            document.getElementById('copyStatus').style.display = 'none';
-                        }}, 2000);
+                            status.style.opacity = '0';
+                        }}, 2500);
                     }}, function(err) {{
                         alert('複製失敗：' + err);
                     }});
                 }}
             </script>
             """
-            components.html(copy_button_html, height=60)
+            components.html(copy_button_html, height=70)
             
             st.text(st.session_state.plain_details)
             st.info("💡 可直接複製貼到 Excel，會自動分欄")
