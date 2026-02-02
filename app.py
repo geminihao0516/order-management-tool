@@ -403,6 +403,51 @@ with tab2:
             st.markdown(st.session_state.full_report)
 
         with preview_tab2:
+            st.subheader("📋 訂單明細表")
+            st.caption("使用說明：直接複製以下內容即可")
+            
+            # 一鍵複製按鈕
+            import streamlit.components.v1 as components
+            
+            # 將內容轉義以防止 JavaScript 注入
+            escaped_content = st.session_state.plain_details.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+            
+            copy_button_html = f"""
+            <div style="margin-bottom: 10px;">
+                <button onclick="copyToClipboard()" style="
+                    background-color: #4CAF50;
+                    border: none;
+                    color: white;
+                    padding: 10px 20px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    border-radius: 8px;
+                    transition: background-color 0.3s;
+                ">
+                    📋 一鍵複製全部內容
+                </button>
+                <span id="copyStatus" style="margin-left: 10px; color: green; display: none;">✅ 已複製！</span>
+            </div>
+            <script>
+                function copyToClipboard() {{
+                    const text = `{escaped_content}`;
+                    navigator.clipboard.writeText(text).then(function() {{
+                        document.getElementById('copyStatus').style.display = 'inline';
+                        setTimeout(function() {{
+                            document.getElementById('copyStatus').style.display = 'none';
+                        }}, 2000);
+                    }}, function(err) {{
+                        alert('複製失敗：' + err);
+                    }});
+                }}
+            </script>
+            """
+            components.html(copy_button_html, height=60)
+            
             st.text(st.session_state.plain_details)
             st.info("💡 可直接複製貼到 Excel，會自動分欄")
 
