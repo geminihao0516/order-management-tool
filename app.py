@@ -376,6 +376,66 @@ with tab1:
     # 顯示轉換結果
     if 'converted_result' in st.session_state and st.session_state.converted_result:
         st.success("✅ 轉換完成！請複製下方結果，貼回上面的輸入框，然後點擊「📊 生成報表」")
+
+        # 一鍵複製按鈕
+        import json
+        escaped_converted = json.dumps(st.session_state.converted_result)[1:-1]
+        copy_converted_html = f"""
+        <div style="margin-bottom: 10px;">
+            <button onclick="copyConverted()" id="copyConvertedBtn" style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border: none;
+                color: white;
+                padding: 10px 20px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                transition: all 0.3s ease;
+            ">
+                <span style="font-size: 18px;">📋</span>
+                一鍵複製轉換結果
+            </button>
+            <span id="copyConvertedStatus" style="
+                margin-left: 15px;
+                color: #48bb78;
+                font-weight: 600;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            ">✅ 已複製到剪貼簿！</span>
+        </div>
+        <style>
+            #copyConvertedBtn:hover {{
+                transform: translateY(-3px);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            }}
+            #copyConvertedBtn:active {{
+                transform: translateY(-1px);
+            }}
+        </style>
+        <script>
+            function copyConverted() {{
+                const text = "{escaped_converted}";
+                navigator.clipboard.writeText(text).then(function() {{
+                    const status = document.getElementById('copyConvertedStatus');
+                    status.style.opacity = '1';
+                    setTimeout(function() {{
+                        status.style.opacity = '0';
+                    }}, 2500);
+                }}, function(err) {{
+                    alert('複製失敗：' + err);
+                }});
+            }}
+        </script>
+        """
+        components.html(copy_converted_html, height=60)
+
         st.text_area(
             "轉換結果（請複製）：",
             value=st.session_state.converted_result,
