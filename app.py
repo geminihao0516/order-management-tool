@@ -7,6 +7,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from order_formatter import OrderFormatter
+from version import APP_RELEASE_DATE, APP_RELEASE_NOTE, APP_VERSION
 from datetime import datetime
 import re
 import html
@@ -131,9 +132,9 @@ def convert_multi_line_format(order_data):
         st.error("❌ 無法解析資料格式！請確認資料是多行格式。")
         return None
 
-    # 調試信息 - 版本標記：v2.2
+    # 調試信息 - 版本標記
     result = '\n'.join(converted_orders)
-    st.info(f"🔍 版本 v2.2 | 解析: {len(orders)} 組 → 轉換: {len(converted_orders)} 筆")
+    st.info(f"🔍 版本 {APP_VERSION} | 解析: {len(orders)} 組 → 轉換: {len(converted_orders)} 筆")
     st.success(f"✅ 成功轉換 {len(converted_orders)} 筆訂單！")
 
     # 調試：顯示前3筆
@@ -290,9 +291,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 主標題
-st.markdown('<div class="main-header">📋 訂單資料整理工具 v2.2</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="main-header">📋 訂單資料整理工具 {APP_VERSION}</div>', unsafe_allow_html=True)
 st.markdown("**自動展開品項 • 雙欄排版 • 統計分析 • 差異比對**")
-st.warning("🔥 新版本 v2.2 - 修復多行願望截斷問題！如果看不到此訊息，請刷新頁面（Ctrl+F5 或 Cmd+Shift+R）")
+st.warning(
+    f"🔥 新版本 {APP_VERSION} - {APP_RELEASE_NOTE}！"
+    " 如果看不到此訊息，請刷新頁面（Ctrl+F5 或 Cmd+Shift+R）"
+)
 st.divider()
 
 # 側邊欄 - 使用說明
@@ -656,7 +660,7 @@ with tab2:
 with tab3:
     st.header("關於本工具")
 
-    st.markdown("""
+    st.markdown(f"""
     ### 🎯 功能特色
 
     - **自動品項展開**：將 `鬼王x3` 自動展開為 3 筆獨立明細
@@ -696,8 +700,8 @@ with tab3:
 
     ### 📝 版本資訊
 
-    - **版本**：v2.2 (網頁版)
-    - **更新日期**：2026-01-10
+    - **版本**：{APP_VERSION} (網頁版)
+    - **更新日期**：{APP_RELEASE_DATE}
 
     ---
 
@@ -708,6 +712,6 @@ with tab3:
 st.divider()
 st.markdown("""
 <div style='text-align: center; color: gray; padding: 1rem;'>
-    <p>訂單資料整理工具 v2.2 | 使用 Streamlit 構建</p>
+    <p>訂單資料整理工具 {APP_VERSION} | 使用 Streamlit 構建</p>
 </div>
-""", unsafe_allow_html=True)
+""".format(APP_VERSION=APP_VERSION), unsafe_allow_html=True)

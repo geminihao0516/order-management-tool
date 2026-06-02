@@ -11,12 +11,13 @@ from datetime import datetime
 import os
 import re
 from order_formatter import OrderFormatter
+from version import APP_VERSION
 
 
 class OrderFormatterGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("📋 訂單資料整理工具 v2.2")
+        self.root.title(f"📋 訂單資料整理工具 {APP_VERSION}")
         self.root.geometry("1200x800")
 
         # 設定視窗圖示和樣式
@@ -56,7 +57,7 @@ class OrderFormatterGUI:
 
         subtitle_label = ttk.Label(
             title_frame,
-            text="自動展開品項 • 雙欄排版 • 統計分析 • 差異比對",
+            text=f"{APP_VERSION} • 自動展開品項 • 雙欄排版 • 統計分析 • 差異比對",
             style='Subtitle.TLabel',
             foreground='gray'
         )
