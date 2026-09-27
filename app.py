@@ -8,6 +8,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from order_formatter import OrderFormatter
 from printable_docx import build_printable_docx
+from printable_pdf import build_a4_png_zip, build_printable_pdf
 from version import APP_RELEASE_DATE, APP_RELEASE_NOTE, APP_VERSION
 from datetime import datetime
 import re
@@ -169,6 +170,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+if st.session_state.get('report_version') != APP_VERSION:
+    for key in (
+        'formatter', 'full_report', 'plain_details', 'plain_statistics',
+        'printable_docx', 'printable_pdf', 'printable_png_zip',
+    ):
+        st.session_state.pop(key, None)
+    st.session_state.report_version = APP_VERSION
 
 # 自訂 CSS 樣式 - 現代設計系統
 st.markdown("""
@@ -500,14 +509,23 @@ if generate_button:
                 if len(formatter.orders) == 0:
                     st.error("❌ 無法解析訂單資料！請檢查資料格式。")
                 else:
-                    # 儲存到 session state
-                    st.session_state.formatter = formatter
-                    st.session_state.reference_data = reference_data.strip() if reference_data else None
+                    # 先產生所有輸出，避免失敗時留下半套報表。
+                    reference = reference_data.strip() if reference_data else None
+                    full_report = formatter.generate_full_report(reference)
+                    plain_details = formatter.generate_plain_details()
+                    plain_statistics = formatter.generate_plain_statistics()
+                    printable_docx = build_printable_docx(formatter.expanded_orders)
+                    printable_pdf = build_printable_pdf(formatter.expanded_orders)
+                    printable_png_zip = build_a4_png_zip(printable_pdf)
 
-                    # 生成報表
-                    st.session_state.full_report = formatter.generate_full_report(st.session_state.reference_data)
-                    st.session_state.plain_details = formatter.generate_plain_details()
-                    st.session_state.plain_statistics = formatter.generate_plain_statistics()
+                    st.session_state.formatter = formatter
+                    st.session_state.reference_data = reference
+                    st.session_state.full_report = full_report
+                    st.session_state.plain_details = plain_details
+                    st.session_state.plain_statistics = plain_statistics
+                    st.session_state.printable_docx = printable_docx
+                    st.session_state.printable_pdf = printable_pdf
+                    st.session_state.printable_png_zip = printable_png_zip
 
                     if formatter.customer_count is not None:
                         st.success(
@@ -554,52 +572,65 @@ with tab2:
 
         st.divider()
 
-        # 下載按鈕
-        st.subheader("📥 下載報表")
+        st.subheader("📥 A4 列印檔")
+        st.caption("PDF 可直接開啟列印；圖片 ZIP 內每頁是一張 300 DPI A4 PNG。")
 
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             st.download_button(
-                label="🖨️ 下載雙欄列印版 Word",
-                data=build_printable_docx(formatter.expanded_orders),
-                file_name=f"訂單雙欄列印版_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                label="🖨️ 下載 A4 PDF（直接列印）",
+                data=st.session_state.printable_pdf,
+                file_name=f"訂單雙欄列印版_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                mime="application/pdf",
                 use_container_width=True,
-                help="A4 雙欄表格，每格一支蠟燭，版型參照附件"
             )
 
         with col2:
-            # 完整報表下載
-            filename = f"訂單報表_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
             st.download_button(
-                label="📄 下載完整報表",
-                data=st.session_state.full_report,
-                file_name=filename,
-                mime="text/markdown",
-                use_container_width=True
+                label="📄 下載 A4 Word",
+                data=st.session_state.printable_docx,
+                file_name=f"訂單雙欄列印版_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+                help="A4 雙欄表格，每格一支蠟燭，版型參照附件",
             )
 
         with col3:
-            # 純明細下載
             st.download_button(
-                label="📋 下載純明細（Tab分隔）",
-                data=st.session_state.plain_details,
-                file_name=f"訂單明細_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                mime="text/plain",
+                label="🖼️ 下載 A4 圖片（PNG ZIP）",
+                data=st.session_state.printable_png_zip,
+                file_name=f"訂單A4圖片_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+                mime="application/zip",
                 use_container_width=True,
-                help="橫向格式，適合貼到 Excel"
             )
 
-        with col4:
-            # 純統計下載
-            st.download_button(
-                label="📊 下載品項統計表",
-                data=st.session_state.plain_statistics,
-                file_name=f"品項統計_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                mime="text/plain",
-                use_container_width=True
-            )
+        with st.expander("其他匯出格式（Markdown／文字）"):
+            extra1, extra2, extra3 = st.columns(3)
+            with extra1:
+                st.download_button(
+                    label="下載完整報表 Markdown",
+                    data=st.session_state.full_report,
+                    file_name=f"訂單報表_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                )
+            with extra2:
+                st.download_button(
+                    label="下載純明細（Tab 分隔）",
+                    data=st.session_state.plain_details,
+                    file_name=f"訂單明細_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                )
+            with extra3:
+                st.download_button(
+                    label="下載品項統計表",
+                    data=st.session_state.plain_statistics,
+                    file_name=f"品項統計_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                )
 
         st.divider()
 

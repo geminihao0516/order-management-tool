@@ -2,6 +2,6 @@
 # -*- coding: utf-8 -*-
 """集中管理專案版本資訊。"""
 
-APP_VERSION = "v2.6"
+APP_VERSION = "v2.7"
 APP_RELEASE_DATE = "2026-09-27"
-APP_RELEASE_NOTE = "修正編號清單轉換，並保留 Word 雙欄列印檔"
+APP_RELEASE_NOTE = "新增 A4 PDF 與逐頁圖片列印檔，精簡下載介面"
