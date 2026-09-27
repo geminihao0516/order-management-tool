@@ -19,7 +19,12 @@ class OrderFormatter:
         '徐柱老人': 300,
         '孔雀王祈願蠟燭': 120,
         '藥師佛': 350,
-        '象神': 260,
+        '象神': 350,
+        '巴拉吉': 350,
+        '九尾狐': 300,
+        '粉色燕通': 300,
+        '馬食能': 300,
+        '黑色小依霸': 300,
         '拆散': 250,
         '拉胡': 260,
         '三色蠟燭': 450,
@@ -53,6 +58,7 @@ class OrderFormatter:
     def __init__(self):
         self.orders = []
         self.expanded_orders = []
+        self.customer_count = None
         self.item_stats = defaultdict(int)
         self.item_amounts = defaultdict(int)  # 新增：各品項總金額
         self.anomalies = []
@@ -110,6 +116,12 @@ class OrderFormatter:
                 if item_name and 1 <= quantity <= 999:
                     items.append((item_name, quantity))
                     continue
+
+            # 貼文常用「九尾狐1」格式；僅接受價目表中已有的名稱。
+            match = re.fullmatch(r'(.+?)(\d{1,3})', part)
+            if match and match.group(1).strip() in self.PRICE_LIST:
+                items.append((match.group(1).strip(), int(match.group(2))))
+                continue
 
             # 如果以上都沒匹配到，預設為數量1
             items.append((part, 1))
@@ -175,6 +187,10 @@ class OrderFormatter:
 
     def load_data(self, data_text: str):
         """載入訂單資料（支援多行格式和容錯處理）"""
+        if re.search(r'^\s*\d+\.\s*.+?\s+\d{4}/\d{1,2}/\d{1,2}\s*$', data_text, re.M):
+            self.load_numbered_data(data_text)
+            return
+
         lines = data_text.strip().split('\n')
 
         i = 0
@@ -262,6 +278,56 @@ class OrderFormatter:
             i += 1
 
         # 自動展開訂單
+        self.expand_orders()
+
+    def load_numbered_data(self, data_text: str):
+        """解析編號、姓名生日、品項與多行願望的貼文格式。"""
+        person = None
+        items_line = None
+        wish_lines = []
+
+        def save_group():
+            if person and items_line:
+                self.orders.append({
+                    'index': len(self.orders) + 1,
+                    'raw_items': items_line,
+                    'main_person': person,
+                    'target_person': '—',
+                    'wish': ' '.join(wish_lines).strip(),
+                })
+
+        for raw_line in data_text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            person_match = re.match(
+                r'^\d+\.\s*(.+?)\s+(\d{4})/(\d{1,2})/(\d{1,2})$', line
+            )
+            if person_match:
+                save_group()
+                self.customer_count = (self.customer_count or 0) + 1
+                name, year, month, day = person_match.groups()
+                person = f'{name.strip()}/{year}.{int(month):02d}.{int(day):02d}'
+                items_line = None
+                wish_lines = []
+                continue
+
+            clean_line = re.sub(r'^[🕯️\s]+', '', line)
+            parts = self.extract_items(clean_line)
+            is_item_line = bool(parts) and all(
+                name in self.PRICE_LIST and quantity > 0 for name, quantity in parts
+            )
+            if person and is_item_line:
+                save_group()
+                items_line = clean_line
+                wish_lines = []
+                continue
+
+            if person and items_line:
+                wish_lines.append(re.sub(r'^願望\s*[：:]\s*', '', line))
+
+        save_group()
         self.expand_orders()
 
     def generate_dual_column_table(self) -> str:
@@ -428,6 +494,8 @@ class OrderFormatter:
         result.append("\n# 📈 報表摘要\n")
         result.append(f"- **生成時間**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         result.append(f"- **總訂單數**：{len(self.orders)} 筆")
+        if self.customer_count is not None:
+            result.append(f"- **原始客戶數**：{self.customer_count} 位")
         result.append(f"- **總品項數**（展開後）：{len(self.expanded_orders)} 支")
         result.append(f"- **品項種類數**：{len(self.item_stats)} 種")
 

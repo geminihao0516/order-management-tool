@@ -7,6 +7,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from order_formatter import OrderFormatter
+from printable_docx import build_printable_docx
 from version import APP_RELEASE_DATE, APP_RELEASE_NOTE, APP_VERSION
 from datetime import datetime
 import re
@@ -491,7 +492,13 @@ if generate_button:
                     st.session_state.plain_details = formatter.generate_plain_details()
                     st.session_state.plain_statistics = formatter.generate_plain_statistics()
 
-                    st.success(f"✅ 報表生成成功！共處理 {len(formatter.orders)} 筆訂單，展開為 {len(formatter.expanded_orders)} 筆明細")
+                    if formatter.customer_count is not None:
+                        st.success(
+                            f"✅ 報表生成成功！共 {formatter.customer_count} 位客戶、"
+                            f"{len(formatter.orders)} 組願望，展開為 {len(formatter.expanded_orders)} 筆明細"
+                        )
+                    else:
+                        st.success(f"✅ 報表生成成功！共處理 {len(formatter.orders)} 筆訂單，展開為 {len(formatter.expanded_orders)} 筆明細")
 
                     # 切換到結果頁籤
                     st.info("👉 請切換到「📊 報表結果」頁籤查看")
@@ -510,7 +517,10 @@ with tab2:
         # 摘要資訊
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("📦 總訂單數", f"{len(formatter.orders)} 筆")
+            if formatter.customer_count is not None:
+                st.metric("📦 客戶數", f"{formatter.customer_count} 位")
+            else:
+                st.metric("📦 總訂單數", f"{len(formatter.orders)} 筆")
         with col2:
             st.metric("📋 總品項數", f"{len(formatter.expanded_orders)} 支")
         with col3:
@@ -518,6 +528,9 @@ with tab2:
         with col4:
             total_amount = sum(formatter.item_amounts.values())
             st.metric("💰 總金額", f"${total_amount}")
+
+        if formatter.customer_count is not None:
+            st.caption(f"這份資料含 {len(formatter.orders)} 組品項與願望；同一位客戶可有多組。")
 
         if formatter.anomalies:
             st.warning(f"⚠️ 發現 {len(formatter.anomalies)} 筆異常訂單")
@@ -527,9 +540,19 @@ with tab2:
         # 下載按鈕
         st.subheader("📥 下載報表")
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
+            st.download_button(
+                label="🖨️ 下載雙欄列印版 Word",
+                data=build_printable_docx(formatter.expanded_orders),
+                file_name=f"訂單雙欄列印版_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+                help="A4 雙欄表格，每格一支蠟燭，版型參照附件"
+            )
+
+        with col2:
             # 完整報表下載
             filename = f"訂單報表_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
             st.download_button(
@@ -540,7 +563,7 @@ with tab2:
                 use_container_width=True
             )
 
-        with col2:
+        with col3:
             # 純明細下載
             st.download_button(
                 label="📋 下載純明細（Tab分隔）",
@@ -551,7 +574,7 @@ with tab2:
                 help="橫向格式，適合貼到 Excel"
             )
 
-        with col3:
+        with col4:
             # 純統計下載
             st.download_button(
                 label="📊 下載品項統計表",
