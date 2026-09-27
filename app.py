@@ -16,6 +16,23 @@ import html
 # 轉換多行格式為 Tab 分隔格式
 def convert_multi_line_format(order_data):
     """轉換多行格式為 Tab 分隔格式"""
+    if re.search(r'^\s*\d+\.\s*.+?\s+\d{4}/\d{1,2}/\d{1,2}\s*$', order_data, re.M):
+        formatter = OrderFormatter()
+        formatter.load_numbered_data(order_data)
+        if not formatter.orders:
+            st.error("❌ 無法解析編號清單，請確認姓名、生日與品項格式。")
+            return None
+        result = '\n'.join(
+            f"{order['raw_items']}\t{order['main_person']}\t"
+            f"{order['target_person']}\t{order['wish']}"
+            for order in formatter.orders
+        )
+        st.success(
+            f"✅ 已轉換 {formatter.customer_count} 位客戶、"
+            f"{len(formatter.orders)} 組品項與願望！"
+        )
+        return result
+
     lines = order_data.split('\n')
 
     # 解析多行格式
@@ -352,7 +369,7 @@ with tab1:
         value=st.session_state.order_data,
         height=300,
         placeholder="請貼上訂單資料...\n\n格式：品項<Tab>姓名/生日<Tab>對象/生日<Tab>願望",
-        help="支援 Tab 分隔格式或多行格式",
+        help="支援 Tab 分隔、多行格式與編號清單；編號清單可直接生成報表",
         key="order_input"
     )
 
